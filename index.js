@@ -206,7 +206,7 @@ app.post('/alugueres', async (req, res) => {
     const user = req.session.user;
     if (!user) {
         window.location.href = "login.html";
-        return res.status(401).json({ mensagem: "Sessão expirada." });
+        return;
     }
     const { id_carro } = req.body;
     if (!id_carro) {
