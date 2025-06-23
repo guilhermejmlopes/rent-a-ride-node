@@ -9,6 +9,7 @@ const { BlobServiceClient } = require('@azure/storage-blob');
 const bcrypt = require('bcrypt');
 const upload = multer({ storage: multer.memoryStorage() });
 const OpenAI = require('openai');
+const { time } = require('console');
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -38,6 +39,7 @@ const carrosContainer = cosmosClient.database(databaseId).container("carros");
 const tiposCarroContainer = cosmosClient.database(databaseId).container("tipos_carro");
 const tiposCombustivelContainer = cosmosClient.database(databaseId).container("tipos_combustivel");
 const utilizadoresContainer = cosmosClient.database(databaseId).container("utilizadores");
+const alugueresContainer = cosmosClient.database(databaseId).container("alugueres");
 
 // Blob Storage
 const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.AZURE_STORAGE_CONNECTION_STRING);
@@ -106,20 +108,18 @@ app.post('/login', async (req, res) => {
 
     try {
         const { resources: utilizadores } = await utilizadoresContainer.items.query(query).fetchAll();
-
         if (utilizadores.length === 0)
             return res.status(401).json({ message: "Utilizador não encontrado." });
 
         const utilizador = utilizadores[0];
         const passwordCorreta = await bcrypt.compare(pwd, utilizador.password);
-
         if (passwordCorreta) {
             req.session.user = {
-                id: utilizador.id,
+                idUtilizador: utilizador.id,
                 nome: utilizador.nome,
                 username: utilizador.username
             };
-            return res.json({ success: true, nome: utilizador.nome });
+            return res.json({ success: true, idUtilizador: utilizador.id, nome: utilizador.nome });
         } else {
             return res.status(401).json({ message: "Palavra-passe incorreta." });
         }
@@ -168,31 +168,70 @@ app.get('/carros', async (req, res) => {
 });
 
 // Endpoint - Carro por ID
-app.get('/carros/:id', async (req, res) => {
-    const { id } = req.params;
+app.get('/carros/:idCarro', async (req, res) => {
+    const { idCarro } = req.params;
+
     const query = {
-        query: "SELECT * FROM c WHERE c.id = @id",
-        parameters: [{ name: "@id", value: id }]
+        query: "SELECT * FROM c WHERE c.id = @idCarro",
+        parameters: [{ name: "@idCarro", value: idCarro }]
     };
 
     try {
         const { resources: carros } = await carrosContainer.items.query(query).fetchAll();
-        if (carros.length === 0) return res.status(404).json({ message: "Carro não encontrado" });
+        if (carros.length === 0)
+            return res.status(404).json({ message: "Carro não encontrado" });
 
         const carro = carros[0];
+
         const [tiposCarroData, tiposCombustivelData] = await Promise.all([
-            tiposCarroContainer.items.query("SELECT * FROM tipos_carro").fetchAll(),
-            tiposCombustivelContainer.items.query("SELECT * FROM tipos_combustivel").fetchAll()
+            tiposCarroContainer.items.query("SELECT * FROM c").fetchAll(),
+            tiposCombustivelContainer.items.query("SELECT * FROM c").fetchAll()
         ]);
+
         const tipoCarro = tiposCarroData.resources.find(t => t.id === carro.tipo);
         const tipoCombustivel = tiposCombustivelData.resources.find(c => c.id === carro.tipo_combustivel);
+
         carro.tipo = tipoCarro? tipoCarro.nome: carro.tipo;
         carro.tipo_combustivel = tipoCombustivel? tipoCombustivel.nome : carro.tipo_combustivel;
 
         return res.json(carro);
     } catch (error) {
-        console.error("Erro ao buscar carro:", error);
+        console.error("Erro ao buscar carro:", error.message, error.stack);
         return res.status(500).json({ message: "Erro interno." });
+    }
+});
+
+// Endpoint - Alugueres
+app.post('/alugueres', async (req, res) => {
+    const user = req.session.user;
+    if (!user) {
+        return res.status(401).json({ mensagem: "Sessão expirada." });
+    }
+    const { id_carro } = req.body;
+    if (!id_carro) {
+        return res.status(400).json({ mensagem: "ID do carro em falta." });
+    }
+    try {
+        // construir o novo ID
+        const { resources: alugueres } = await alugueresContainer.items
+            .query("SELECT VALUE COUNT(1) FROM c")
+            .fetchAll();
+
+        const totalAlugueres = alugueres[0];
+        const novoID = `a${totalAlugueres + 1}`;
+        console.log(novoID);
+
+        const novoAluguer = {
+            id: novoID,
+            id_utilizador: user.idUtilizador,
+            id_carro: id_carro,
+            criado_em: new Date().toISOString()
+        };
+        await alugueresContainer.items.create(novoAluguer);
+        res.json({ mensagem: "Aluguer criado com sucesso!" });
+    } catch (erro) {
+        console.error("Erro ao criar aluguer:", erro);
+        res.status(500).json({ mensagem: "Erro ao criar o aluguer." });
     }
 });
 
