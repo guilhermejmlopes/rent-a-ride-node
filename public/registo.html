@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+	<meta charset="UTF-8">
+	<link rel="icon" type="image/x-icon" href="favicon.ico">
+	<title>RENT-A-RIDE</title>
+	<link rel="stylesheet" href="css/bootstrap.min.css">
+	<link rel="stylesheet" href="css/bootstrap.css">
+	<style>
+		label {
+			color: #222222;
+			font-size: 1.1rem;
+		}
+	</style>
+</head>
+
+<body style="background-color: #C5C6D0;">
+	<nav class="fixed-top navbar navbar-expand-lg" style="background-color: #111111; border: none;" data-bs-theme="dark">
+		<div class="container-fluid">
+			<a class="navbar-brand ps-4" href="index.html">RENT-A-RIDE</a>
+			<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01" aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+			<span class="navbar-toggler-icon"></span>
+			</button>
+			<div class="collapse navbar-collapse" id="navbarColor01">
+				<ul class="navbar-nav me-auto">
+					<li class="nav-item">
+						<a class="nav-link active" href="index.html">Home</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="sobrenos.html">Sobre nós</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="faq.html">FAQ</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="contactos.html">Contactos</a>
+					</li>
+				</ul>
+				<ul class="navbar-nav ms-auto">
+					<li class="nav-item" id="nav-login">
+						<a class="nav-link" href="login.html">Login/Registo</a>
+					</li>
+					<li class="nav-item" id="nav-dados" style="display: none;">
+						<a class="nav-link" href="#">Dados pessoais</a>
+					</li>
+					<li class="nav-item" id="nav-logout" style="display: none;">
+						<a class="nav-link" href="#" id="logout-link">Sair</a>
+					</li>
+				</ul>
+			</div>
+		</div>
+	</nav>
+
+	<div class="container-fluid d-flex justify-content-center align-items-center" style="background-color: #C5C6D0; min-height: 100vh">
+		<div style="width: 80vw; max-width: 80vw; padding: 4vh; background: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
+			<h1 class="text-center mb-2">Registo</h1>
+			<form id="registo-form" enctype="multipart/form-data" novalidate>
+				<div class="row">
+					<div class="form-group col-md-6 mb-2" style="padding-top: 2vh;">
+						<label>Nome completo (* indica um campo obrigatório)</label>
+						<input type="text" class="form-control" name="nome" id="nome" placeholder="Ex.: Gabriel Charro" required pattern="^[A-Za-zÀ-ÿ\s]+$" title="Não pode conter números nem caracteres especiais.">
+					</div>
+					<div class="form-group col-md-6 mb-2" style="padding-top: 2vh;">
+						<label>Data de nascimento *</label>
+						<input type="date" class="form-control" name="dataNascimento" id="data_nascimento" required title="Deve ser maior de 18 anos.">
+					</div>
+				</div>
+				<div class="row">
+					<div class="form-group col-md-6 mb-2" style="padding-top: 2vh;">
+						<label>Número de telemóvel *</label>
+						<input type="text" class="form-control" name="telemovel" id="telemovel" placeholder="Ex.: 960128805" required pattern="^\d{9}$" title="Introduza exatamente 9 dígitos.">
+					</div>
+					<div class="form-group col-md-6 mb-2" style="padding-top: 2vh;">
+						<label>Endereço de email *</label>
+						<input type="email" class="form-control" name="email" id="email" placeholder="Ex.: charro.gabriel@ipcbcampus.pt" required title="Introduza o seu endereço de email.">
+					</div>
+				</div>
+				<div class="row">
+					<div class="form-group col-md-6 mb-2" style="padding-top: 2vh;">
+						<label>Nome de utilizador *</label>
+						<input type="text" class="form-control" name="user" id="user" placeholder="Ex.: charro" required pattern="^[A-Za-zÀ-ÿ0-9_.-]+$" title="Não pode conter espaços nem caracteres especiais.">
+					</div>
+					<div class="form-group col-md-6 mb-2" style="padding-top: 2vh;">
+						<label>Palavra-passe *</label>
+						<input type="password" class="form-control" name="pwd" id="pwd" placeholder="Palavra-passe" autocomplete="off" required title="Introduza uma palavra-passe segura!">
+					</div>
+				</div>
+				<div class="row">
+					<div class="form-group col-md-10" style="padding-top: 2vh;">
+						<input type="file" id="cartaConducao" name="cartaConducao" class="form-control d-none" required title="Introduza a sua carta de condução!">
+						<label for="cartaConducao" class="btn btn-primary" style="background-color: #f0f1f2; color: black; border: 1px solid black;">Carta de condução *</label>
+						<span id="file-name" class="ms-4">Nenhum ficheiro selecionado</span>
+					</div>
+					<div class="col-md-2 d-flex justify-content-end align-items-end" style="text-align: right">
+						<button type="submit" class="btn btn-primary">Registar</button>
+					</div>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<div id="footer-container"></div>
+
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+	<script>
+		// Atualiza nome do ficheiro quando selecionado
+		const fileInput = document.getElementById("cartaConducao");
+		const fileNameSpan = document.getElementById("file-name");
+		fileInput.addEventListener("change", () => {
+			fileNameSpan.textContent = fileInput.files[0]? fileInput.files[0].name: "Nenhum ficheiro selecionado";
+		});
+
+		// Limitar data de nascimento para hoje
+		document.getElementById("data_nascimento").max = new Date().toISOString().split("T")[0];
+
+		// Validação e envio do formulário
+		document.getElementById("registo-form").addEventListener("submit", async (event) => {
+			event.preventDefault();
+
+			if (!validarFormulario())
+				return;
+
+			const form = event.target;
+			const formData = new FormData(form);
+
+			try {
+				const res = await fetch("/registo", {
+					method: "POST",
+					body: formData,
+				});
+				if (res.ok) {
+					alert("Registo efetuado com sucesso!");
+					window.location.href = "login.html";
+				} else {
+					const errorData = await res.json();
+					alert("Erro no registo: " + (errorData.message || "Erro desconhecido"));
+				}
+			} catch (error) {
+				alert("Erro ao comunicar com o servidor: "+ error.message);
+			}
+		});
+		function validarFormulario() {
+			const nome = document.getElementById("nome").value.trim();
+			const user = document.getElementById("user").value.trim();
+			const dataNascimento = document.getElementById("data_nascimento").value;
+
+			// nome inválido se conter dígitos
+			const nomeInvalido = /\d/.test(nome);
+
+			// username inválido se conter espaços ou caracteres inválidos
+			const userInvalido = /[^A-Za-zÀ-ÿ0-9_.-]/.test(user);
+
+			// valida idade >= 18 anos
+			const hoje = new Date();
+			const nascimento = new Date(dataNascimento);
+			let idade = hoje.getFullYear() - nascimento.getFullYear();
+			const mes = hoje.getMonth() - nascimento.getMonth();
+			const dia = hoje.getDate() - nascimento.getDate();
+
+			if (mes < 0 || (mes === 0 && dia < 0))
+				idade--;
+			const maiorDeIdade = idade >= 18;
+
+			if (nomeInvalido) {
+				alert("O nome completo não pode conter dígitos.");
+				return false;
+			}
+			if (userInvalido) {
+				alert("O nome de utilizador não pode conter espaços nem caracteres especiais.");
+				return false;
+			}
+			if (!maiorDeIdade) {
+				alert("Para se registar deve ser maior de 18 anos.");
+				return false;
+			}
+			return true;
+		}
+	</script>
+	<script>
+		fetch("footer.html")
+		.then((response) => response.text())
+		.then((data) => {
+			document.getElementById("footer-container").innerHTML = data;
+		});
+	</script>
+	<script src="js/navbar.js"></script>
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8" />
+    <title>RENT-A-RIDE</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/bootstrap.css">
+</head>
+
+<body style="background-color: #C5C6D0;">
+	<nav class="fixed-top navbar navbar-expand-lg" style="background-color: #111111; border: none;" data-bs-theme="dark">
+		<div class="container-fluid">
+			<a class="navbar-brand ps-4" href="index.html">RENT-A-RIDE</a>
+			<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01" aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+			<span class="navbar-toggler-icon"></span>
+			</button>
+			<div class="collapse navbar-collapse" id="navbarColor01">
+				<ul class="navbar-nav me-auto">
+					<li class="nav-item">
+						<a class="nav-link active" href="index.html">Home</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="#">Sobre nós</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="#">FAQ</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="#">Contactos</a>
+					</li>
+				</ul>
+				<ul class="navbar-nav ms-auto">
+					<li class="nav-item" id="nav-login">
+						<a class="nav-link" href="login.html">Login/Registo</a>
+					</li>
+					<li class="nav-item" id="nav-dados" style="display: none;">
+						<a class="nav-link" href="#">Dados pessoais</a>
+					</li>
+					<li class="nav-item" id="nav-logout" style="display: none;">
+						<a class="nav-link" href="#" id="logout-link">Sair</a>
+					</li>
+				</ul>
+			</div>
+		</div>
+	</nav>
+
+    <div class="container-fluid d-flex justify-content-center align-items-center" style="background-color: #C5C6D0; min-height: 100vh;">
+        <div class="text-center mt-4" id="loading-detalhes-carro" style="color: black;">
+			<h3>A carregar, aguarde...</h3>
+		</div>
+  		<div id="detalhes-carro-container" style="width: 80vw; max-width: 80vw; padding: 4vh; background: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); display: none;" >
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        async function carregarDetalhesCarro() {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get("id");
+            if (!id) {
+                document.getElementById("detalhes-carro-container").innerHTML = "<h3>ID do carro não fornecido.</h3>";
+                return;
+            }
+            try {
+                const response = await fetch(`/carros/${id}`);
+                if (!response.ok) 
+                    throw new Error("Carro não encontrado.");
+
+                const carro = await response.json();
+
+                const container = document.getElementById("detalhes-carro-container");
+                container.innerHTML = `
+                    <div class="text-center">
+                        <h2 class="text-uppercase">${carro.modelo}</h2>
+                        <p>${carro.tipo}</p>
+                    </div>
+                    <div class="row align-items-center mb-2">
+                        <div class="col-md-7 text-center">
+                            <img src="${carro.imagem}" alt="${carro.modelo}" class="img-fluid" style="height: 32vh; background-color: none;">
+                        </div>
+                        <div class="col-md-5">
+                            <p><strong>Tipo de combustível:</strong> ${carro.tipo_combustivel}</p>
+                            <p><strong>Custo por dia:</strong> ${carro.preco_base? "€"+carro.preco_base: "Valor indisponível"}</p>
+                            <p><strong>Kilometragem:</strong> ${carro.n_km || "Valor indisponível"} km</p>
+                            <p><strong>Ano:</strong> ${carro.ano || "Valor indisponível"}</p>
+                            <p><strong>Número de lugares:</strong> ${carro.n_lugares || "Valor indisponível"}</p>
+                        </div>
+                    </div>
+                    <div class="row mt-4">
+                        <div class="form-group col-md-10" style="padding-top: 2vh;">
+                            <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#assistenteModal">
+                                Perguntar ao Assistente Especial
+                            </button>
+                        </div>
+                        <div class="col-md-2 d-flex justify-content-end align-items-end" style="padding-top: 2vh;">
+                            <a href="index.html" class="btn btn-primary me-2">Alugar</a>
+                        </div>
+                    </div>
+				</div>
+                `;
+                document.getElementById('loading-detalhes-carro').style.display = 'none';
+                container.style.display = 'block';
+            } catch (error) {
+                document.getElementById("detalhes-carro-container").innerHTML = `<h3>Erro ao carregar detalhes do carro: ${error.message}</h3>`;
+            }
+        }
+        carregarDetalhesCarro();
+
+        async function enviarPergunta() {
+            const input = document.getElementById("user-input");
+            const mensagem = input.value.trim();
+            if (!mensagem)
+                return;
+
+            const chat = document.getElementById("chat-container");
+            const userDiv = document.createElement("div");
+            userDiv.innerHTML = `<strong>Você:</strong> ${mensagem}`;
+            chat.appendChild(userDiv);
+
+            input.value = "";
+            const loading = document.createElement("div");
+            loading.innerHTML = "<em>Assistente está a escrever...</em>";
+            chat.appendChild(loading);
+
+            try {
+                const resposta = await fetch("/api/assistente", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ pergunta: mensagem })
+                });
+                const data = await resposta.json();
+                loading.remove();
+
+                const botDiv = document.createElement("div");
+                botDiv.innerHTML = `<strong>Assistente:</strong> ${data.resposta}`;
+                chat.appendChild(botDiv);
+                chat.scrollTop = chat.scrollHeight;
+            } catch (error) {
+                loading.remove();
+                const err = document.createElement("div");
+                err.innerHTML = "<strong>Erro ao contactar o assistente.</strong>";
+                chat.appendChild(err);
+            }
+        }
+    </script>
+
+    <!-- Modal do Assistente -->
+    <div class="modal fade" id="assistenteModal" tabindex="-1" aria-labelledby="assistenteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assistenteModalLabel">Assistente Especial</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="chat-container" style="max-height: 400px; overflow-y: auto; margin-bottom: 1rem;"></div>
+                <div class="input-group" style="gap: 2vh;">
+                    <input type="text" id="user-input" class="form-control" placeholder="Escreva a sua pergunta..." style="border: none; box-shadow: none;">
+                    <button class="btn btn-info" onclick="enviarPergunta()" style="margin-left: 0;">Enviar</button>
+                </div>
+            </div>
+            </div>
+        </div>
+    </div>
+
+	<div id="footer-container"></div>
+
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+	<script>
+		fetch("footer.html")
+			.then(response => response.text())
+			.then(data => {
+				document.getElementById("footer-container").innerHTML = data;
+			});
+	</script>
+	<script src="js/navbar.js"></script>
+</body>
+</html>

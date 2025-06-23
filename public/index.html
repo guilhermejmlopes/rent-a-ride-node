@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+	<meta charset="UTF-8">
+	<link rel="icon" type="image/x-icon" href="favicon.ico">
+	<title>RENT-A-RIDE</title>
+	<link rel="stylesheet" href="css/bootstrap.min.css">
+	<link rel="stylesheet" href="css/bootstrap.css">
+</head>
+
+<body style="background-color: #C5C6D0;">
+	<nav class="fixed-top navbar navbar-expand-lg" style="background-color: #111111; border: none;" data-bs-theme="dark">
+		<div class="container-fluid">
+			<a class="navbar-brand ps-4" href="index.html">RENT-A-RIDE</a>
+			<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01" aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+			<span class="navbar-toggler-icon"></span>
+			</button>
+			<div class="collapse navbar-collapse" id="navbarColor01">
+				<ul class="navbar-nav me-auto">
+					<li class="nav-item">
+						<a class="nav-link active" href="index.html">Home</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="#">Sobre nós</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="#">FAQ</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="#">Contactos</a>
+					</li>
+				</ul>
+				<ul class="navbar-nav ms-auto">
+					<li class="nav-item" id="nav-login">
+						<a class="nav-link" href="login.html">Login/Registo</a>
+					</li>
+					<li class="nav-item" id="nav-dados" style="display: none;">
+						<a class="nav-link" href="#">Dados pessoais</a>
+					</li>
+					<li class="nav-item" id="nav-logout" style="display: none;">
+						<a class="nav-link" href="#" id="logout-link">Sair</a>
+					</li>
+				</ul>
+			</div>
+		</div>
+	</nav>
+
+	<div class="container-fluid py-5 mt-5" style="background-color: #111111; color: white;">
+		<h1 class="text-center mb-4" style="color: white;">Que carro quer conduzir hoje?</h1>
+		<div class="container">
+			<form>
+				<div class="row mb-4">
+					<div class="col-md-4 mb-2 mb-md-0">
+						<select class="form-select" id="tipos-carro-container">
+							<option selected disabled>Tipo de carro</option>
+						</select>
+					</div>
+					<div class="col-md-8">
+						<input type="text" class="form-control" placeholder="Modelo do carro (ex.: Renault 4L)">
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-9 mb-3">
+						<input type="text" class="form-control" placeholder="Local de recolha (ex.: Avenida do Empresário)">
+					</div>
+					<div class="col-md-3 mb-3 text-end">
+						<button type="submit" class="btn btn-primary w-100" style="border: 1px solid white;">Pesquisar</button>
+					</div>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<div class="card" style="background-color: #C5C6D0; border: none; padding: 2vh;">
+		<div class="card-body text-center">
+			<div class="row">
+				<h1>Carros</h1>
+			</div>
+			<div class="text-center mt-4" id="loading-carros" style="color: black;">
+				<h3>A carregar, aguarde...</h3>
+			</div>
+			<div id="carros-container" class="row justify-content-center" style="display: none;"></div>
+		</div>
+	</div>
+
+	<script>
+		window.onload = async function () {
+			try {
+			const responseTiposCarro = await fetch('/tipos_carro');
+			const tiposCarro = await responseTiposCarro.json();
+			const containerTiposCarro = document.getElementById('tipos-carro-container');
+			tiposCarro.forEach(tipo => {
+				const option = document.createElement('option');
+				option.value = tipo.id;
+				option.textContent = tipo.nome;
+				containerTiposCarro.appendChild(option);
+			});
+
+			const responseCarros = await fetch('/carros');
+			const carros = await responseCarros.json();
+			const containerCarros = document.getElementById('carros-container');
+			containerCarros.innerHTML = '';
+
+			if (carros.length === 0) {
+				containerCarros.innerHTML = '<h3 style="text-align: center; margin-top: 4vh;">Não estão disponíveis carros de momento.</h3>';
+			} else {
+				carros.forEach((carro, index) => {
+				if (index % 3 === 0) {
+					const row = document.createElement('div');
+					row.style.display = 'flex';
+					row.style.justifyContent = 'center';
+					row.style.flexWrap = 'wrap';
+					row.style.marginBottom = '30px';
+					containerCarros.appendChild(row);
+				}
+				const lastRow = containerCarros.lastElementChild;
+
+				const cardWrapper = document.createElement('div');
+				cardWrapper.style.margin = '20px';
+
+				const card = document.createElement('div');
+				card.className = 'card rounded-2 shadow-sm';
+				card.style.width = '400px';
+				card.style.border = '1px solid #ddd';
+				card.style.overflow = 'hidden';
+				card.style.backgroundColor = '#fff';
+
+				card.innerHTML = `
+					<div style="overflow: hidden; width: 100%; height: 200px; display: flex; justify-content: center; align-items: center;">
+					<img src="${carro.imagem}" alt="${carro.modelo}" 
+						style="width: 80%; height: 100%; object-fit: cover; display: block; transition: transform 0.4s ease;">
+					</div>
+					<div style="padding: 16px; text-align: center;">
+					<h5 style="margin: 0 0 10px 0; font-size: 18px;">${carro.modelo}</h5>
+					<p style="margin: 0 0 15px 0;">${carro.tipo}</p>
+					<a href="carro.html?id=${carro.id}" class="btn btn-primary">Saber mais</a>
+					</div>
+				`;
+
+				const img = card.querySelector('img');
+				img.addEventListener('mouseover', () => {
+					img.style.transform = 'scale(1.04)';
+				});
+				img.addEventListener('mouseout', () => {
+					img.style.transform = 'scale(1)';
+				});
+				cardWrapper.appendChild(card);
+				lastRow.appendChild(cardWrapper);
+				});
+			}
+			document.getElementById('loading-carros').style.display = 'none';
+			containerCarros.style.display = 'flex';
+			} catch (error) {
+				console.error('Erro ao carregar os carros ou tipos:', error);
+				const loadingDiv = document.getElementById('loading-carros');
+				loadingDiv.textContent = 'Erro ao carregar os dados. Tente novamente mais tarde.';
+			}
+		};
+	</script>
+	<div style="height: 40px;"></div>
+
+	<div id="footer-container"></div>
+
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+	<script>
+		fetch("footer.html")
+			.then(response => response.text())
+			.then(data => {
+				document.getElementById("footer-container").innerHTML = data;
+			});
+	</script>
+	<script src="js/navbar.js"></script>
+</body>
+</html>
