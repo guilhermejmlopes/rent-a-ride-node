@@ -103,17 +103,14 @@
 
 	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 	<script>
-		// Atualiza nome do ficheiro quando selecionado
 		const fileInput = document.getElementById("cartaConducao");
 		const fileNameSpan = document.getElementById("file-name");
 		fileInput.addEventListener("change", () => {
 			fileNameSpan.textContent = fileInput.files[0]? fileInput.files[0].name: "Nenhum ficheiro selecionado";
 		});
 
-		// Limitar data de nascimento para hoje
 		document.getElementById("data_nascimento").max = new Date().toISOString().split("T")[0];
 
-		// Validação e envio do formulário
 		document.getElementById("registo-form").addEventListener("submit", async (event) => {
 			event.preventDefault();
 
