@@ -90,7 +90,7 @@
                     </div>
                     <div class="row mt-4">
                         <div class="form-group col-md-10" style="padding-top: 2vh;">
-                            <button class="btn btn-info" data-bs-toggle="modal>" data-bs-target="#assistenteModal"> Perguntar ao Assistente Especial</button>
+                            <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#assistenteModal"> Perguntar ao Assistente Especial</button>
                         </div>
                         <div class="col-md-2 d-flex justify-content-end align-items-end" style="padding-top: 2vh;">
                             <a class="btn btn-primary me-2" onclick="criarAluguer()">Alugar</a>
@@ -126,7 +126,7 @@
                     })
                 });
                 if (response.status === 401) {
-                    alert("Sessão expirada. Por favor, inicie sessão.");
+                    alert("Para alugar um carro deve ter sessão iniciada.");
                     return;
                 }
                 if (!response.ok) {
