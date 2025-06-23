@@ -111,10 +111,15 @@
             const params = new URLSearchParams(window.location.search);
             const idCarro = params.get("id");
 
-            if (!idUtilizador || !idCarro) {
-                alert("Erro: Sessão expirada ou ID inválido.");
+            if (!idUtilizador) {
+                window.location.href = "login.html";
                 return;
             }
+            if (!idCarro) {
+                alert("Erro: ID do carro inválido");
+                return;
+            }
+            
             try {
                 const response = await fetch("/alugueres", {
                     method: "POST",

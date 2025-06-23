@@ -209,7 +209,7 @@ app.post('/alugueres', async (req, res) => {
     }
     const { id_carro } = req.body;
     if (!id_carro) {
-        return res.status(400).json({ mensagem: "ID do carro em falta." });
+        return res.status(400).json({ mensagem: "ID do carro inválido." });
     }
     try {
         // construir o novo ID
