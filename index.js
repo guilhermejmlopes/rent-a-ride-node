@@ -9,7 +9,6 @@ const { BlobServiceClient } = require('@azure/storage-blob');
 const bcrypt = require('bcrypt');
 const upload = multer({ storage: multer.memoryStorage() });
 const OpenAI = require('openai');
-const { time } = require('console');
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -207,17 +206,18 @@ app.post('/alugueres', async (req, res) => {
     if (!user) {
         return res.status(401).json({ mensagem: "Para alugar um carro deve ter sessão iniciada." });
     }
+
     const { id_carro } = req.body;
     if (!id_carro) {
         return res.status(400).json({ mensagem: "ID do carro inválido." });
     }
-    try {
-        // construir o novo ID
-        const { resources: alugueres } = await alugueresContainer.items
-            .query("SELECT VALUE COUNT(1) FROM c")
-            .fetchAll();
 
-        const totalAlugueres = alugueres[0];
+    try {
+        const { resources: alugueres } = await alugueresContainer.items
+        .query("SELECT VALUE COUNT(1) FROM c")
+        .fetchAll();
+
+        const totalAlugueres = Number(alugueres[0]);
         const novoID = `a${totalAlugueres + 1}`;
 
         const novoAluguer = {
@@ -227,12 +227,82 @@ app.post('/alugueres', async (req, res) => {
             criado_em: new Date().toISOString()
         };
         await alugueresContainer.items.create(novoAluguer);
-        res.json({ mensagem: "Aluguer criado com sucesso!" });
+
+        // Buscar utilizador e carro para criar a mensagem
+        const queryUser = {
+            query: "SELECT * FROM utilizadores u WHERE u.id = @id",
+            parameters: [{ name: "@id", value: user.idUtilizador }]
+        };
+        const { resources: utilizadores } = await utilizadoresContainer.items.query(queryUser).fetchAll();
+        const utilizador = utilizadores[0];
+        if (!utilizador) 
+            throw new Error("Utilizador não encontrado.");
+
+        const queryCarro = {
+            query: "SELECT * FROM carros c WHERE c.id = @id",
+            parameters: [{ name: "@id", value: id_carro }]
+        };
+        const { resources: carros } = await carrosContainer.items.query(queryCarro).fetchAll();
+        const carro = carros[0];
+        if (!carro) 
+            throw new Error("Carro não encontrado.");
+
+        const mensagem = `
+            Olá ${utilizador.nome},
+
+            O seu aluguer do carro está confirmado!
+
+            Detalhes:
+            - Modelo: ${carro.modelo}
+            - Custo: €${carro.preco_base}/dia
+
+            Obrigado por usar o RENT-A-RIDE!
+
+            Gabriel Charro
+            Guilherme Lopes
+            João Pires
+            `;
+
+        const resposta = await fetch("https://rent-a-ride-email-app.azurewebsites.net/api/enviaMail", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            recipient: utilizador.email,
+            subject: "RENT-A-RIDE | Confirmação de Aluguer",
+            message: mensagem.trim()
+        })
+        });
+
+        if (!resposta.ok) {
+        const erro = await resposta.text();
+        console.error(`Erro no serviço de email: ${erro}`);
+        return res.status(201).json({
+            mensagem: "Aluguer criado, mas erro ao enviar o e-mail.",
+            detalheErroEmail: erro
+        });
+        }
+
+        const textoResposta = await resposta.text();
+        let resultado;
+        try {
+            resultado = JSON.parse(textoResposta);
+        } catch {
+            resultado = textoResposta;
+        }
+
+        return res.status(201).json({
+        mensagem: "Aluguer criado com sucesso e e-mail enviado.",
+        resultado
+        });
+
     } catch (erro) {
-        console.error("Erro ao criar aluguer:", erro);
-        res.status(500).json({ mensagem: "Erro ao criar o aluguer." });
+        console.error("Erro ao criar aluguer ou enviar email:", erro);
+        return res.status(500).json({ mensagem: "Erro interno ao criar aluguer." });
     }
-});
+    });
+
 
 // Endpoint - Chat com assistente
 app.post('/api/assistente', async (req, res) => {
