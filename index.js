@@ -205,8 +205,7 @@ app.get('/carros/:idCarro', async (req, res) => {
 app.post('/alugueres', async (req, res) => {
     const user = req.session.user;
     if (!user) {
-        window.location.href = "login.html";
-        return;
+        return res.status(401).json({ mensagem: "Para alugar um carro deve ter sessão iniciada." });
     }
     const { id_carro } = req.body;
     if (!id_carro) {
@@ -220,7 +219,6 @@ app.post('/alugueres', async (req, res) => {
 
         const totalAlugueres = alugueres[0];
         const novoID = `a${totalAlugueres + 1}`;
-        console.log(novoID);
 
         const novoAluguer = {
             id: novoID,

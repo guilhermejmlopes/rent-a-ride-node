@@ -111,10 +111,6 @@
             const params = new URLSearchParams(window.location.search);
             const idCarro = params.get("id");
 
-            if (!idUtilizador) {
-                window.location.href = "login.html";
-                return;
-            }
             if (!idCarro) {
                 alert("Erro: ID do carro inválido");
                 return;
@@ -129,6 +125,10 @@
                         id_carro: idCarro
                     })
                 });
+                if (response.status === 401) {
+                    alert("Sessão expirada. Por favor, inicie sessão.");
+                    return;
+                }
                 if (!response.ok) {
                     const erro = await response.json();
                     throw new Error(erro.mensagem || "Erro ao criar o aluguer.");
