@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-require('dotenv').config({ path: './key.env' });
+require('dotenv').config();
 const cors = require('cors');
 const session = require('express-session');
 const { CosmosClient } = require('@azure/cosmos');
