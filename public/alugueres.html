@@ -70,7 +70,7 @@
 					<tr>
 						<th scope="col" style="width: 35%;">Carro</th>
 						<th scope="col" style="width: 35%;">Data e Hora de Início</th>
-						<th scope="col" style="width: 20%;">Custo</th>
+						<th scope="col" style="width: 25%;">Custo</th>
 						<th scope="col" style="width: 10%;"></th>
 					</tr>
 				</thead>
@@ -105,7 +105,7 @@
 						<td>${a.modelo}</td>
 						<td>${new Date(a.criado_em).toLocaleString("pt-PT", { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
 						<td>€${a.preco.toFixed(2)}</td>
-						<td><button class="btn btn-danger" style="margin-top: 0;" onclick="pararAluguer('${a.id}')">Parar</button></td>
+						<td><button class="btn btn-danger" onclick="pararAluguer('${a.id}')">Parar</button></td>
 					`;
 					tbody.appendChild(row);
 				});
