@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <title>RENT-A-RIDE</title>
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/x-icon" href="https://storagerentaride.blob.core.windows.net/site/favicon.ico">
     <link rel="stylesheet" href="css/bootstrap.min.css">
     <link rel="stylesheet" href="css/bootstrap.css">
 </head>
@@ -34,8 +34,8 @@
 					<li class="nav-item" id="nav-login">
 						<a class="nav-link" href="login.html">Login/Registo</a>
 					</li>
-					<li class="nav-item" id="nav-dados" style="display: none;">
-						<a class="nav-link" href="#">Dados pessoais</a>
+					<li class="nav-item" id="nav-alugueres" style="display: none;">
+						<a class="nav-link" href="alugueres.html">Alugueres</a>
 					</li>
 					<li class="nav-item" id="nav-logout" style="display: none;">
 						<a class="nav-link" href="#" id="logout-link">Sair</a>
@@ -60,14 +60,18 @@
                 document.getElementById("loading-detalhes-carro").style.display = "none";
                 const container = document.getElementById("detalhes-carro-container");
                 container.style.display = "block";
-                container.innerHTML = "<h3>ID do carro não fornecido.</h3>";
+                container.innerHTML = "<h3>ID do carro inválido.</h3>";
                 return;
             }
             try {
                 const response = await fetch(`/carros/${idCarro}`);
-                if (!response.ok) 
-                    throw new Error("Carro não encontrado.");
-
+                if (!response.ok) {
+                    document.getElementById("loading-detalhes-carro").style.display = "none";
+                    const container = document.getElementById("detalhes-carro-container");
+                    container.style.display = "block";
+                    container.innerHTML = "<h3>Carro não encontrado.</h3>";
+                    return;
+                }
                 const carro = await response.json();
 
                 const container = document.getElementById("detalhes-carro-container");
@@ -82,7 +86,7 @@
                         </div>
                         <div class="col-md-5">
                             <p><strong>Tipo de combustível:</strong> ${carro.tipo_combustivel}</p>
-                            <p><strong>Custo por dia:</strong> ${carro.preco_base? "€"+carro.preco_base: "Valor indisponível"}</p>
+                            <p><strong>Custo por dia:</strong> ${carro.preco_base? "€"+carro.preco_base.toFixed(2): "Valor indisponível"}</p>
                             <p><strong>Kilometragem:</strong> ${carro.n_km || "Valor indisponível"} km</p>
                             <p><strong>Ano:</strong> ${carro.ano || "Valor indisponível"}</p>
                             <p><strong>Número de lugares:</strong> ${carro.n_lugares || "Valor indisponível"}</p>
