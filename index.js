@@ -142,7 +142,7 @@ app.get('/tipos_carro', async (req, res) => {
 // Endpoint - Carros
 app.get('/carros', async (req, res) => {
     try {
-        const carrosQuery = { query: "SELECT * FROM carros" };
+        const carrosQuery = { query: "SELECT * FROM carros c WHERE c.esta_disponivel = true" };
         const tiposCarroQuery = { query: "SELECT * FROM tipos_carro" };
         const tiposCombustivelQuery = { query: "SELECT * FROM tipos_combustivel" };
 
@@ -200,35 +200,18 @@ app.get('/carros/:idCarro', async (req, res) => {
     }
 });
 
-// Endpoint - Alugueres
+// Endpoint - POST Alugueres
 app.post('/alugueres', async (req, res) => {
     const user = req.session.user;
     if (!user) {
         return res.status(401).json({ mensagem: "Para alugar um carro deve ter sessão iniciada." });
     }
-
     const { id_carro } = req.body;
     if (!id_carro) {
         return res.status(400).json({ mensagem: "ID do carro inválido." });
     }
 
     try {
-        const { resources: alugueres } = await alugueresContainer.items
-        .query("SELECT VALUE COUNT(1) FROM c")
-        .fetchAll();
-
-        const totalAlugueres = Number(alugueres[0]);
-        const novoID = `a${totalAlugueres + 1}`;
-
-        const novoAluguer = {
-            id: novoID,
-            id_utilizador: user.idUtilizador,
-            id_carro: id_carro,
-            criado_em: new Date().toISOString()
-        };
-        await alugueresContainer.items.create(novoAluguer);
-
-        // Buscar utilizador e carro para criar a mensagem
         const queryUser = {
             query: "SELECT * FROM utilizadores u WHERE u.id = @id",
             parameters: [{ name: "@id", value: user.idUtilizador }]
@@ -246,11 +229,30 @@ app.post('/alugueres', async (req, res) => {
         const carro = carros[0];
         if (!carro) 
             throw new Error("Carro não encontrado.");
+        
+        const { resources: alugueres } = await alugueresContainer.items
+            .query("SELECT VALUE COUNT(1) FROM c")
+            .fetchAll();
+
+        const totalAlugueres = Number(alugueres[0]);
+        const novoID = `a${totalAlugueres + 1}`;
+
+        const novoAluguer = {
+            id: novoID,
+            id_utilizador: user.idUtilizador,
+            id_carro: id_carro,
+            criado_em: new Date().toISOString(),
+            ativo: true,
+            preco: carro.preco_base
+        };
+        await alugueresContainer.items.create(novoAluguer);
+        carro.esta_disponivel = false;
+        await carrosContainer.items.upsert(carro);
 
         const mensagem = `
             Olá ${utilizador.nome},
 
-            O seu aluguer do carro está confirmado!
+            O seu aluguer está confirmado!
 
             Detalhes:
             - Modelo: ${carro.modelo}
@@ -264,24 +266,24 @@ app.post('/alugueres', async (req, res) => {
             `;
 
         const resposta = await fetch("https://rent-a-ride-email-app.azurewebsites.net/api/enviaMail", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            recipient: utilizador.email,
-            subject: "RENT-A-RIDE | Confirmação de Aluguer",
-            message: mensagem.trim()
-        })
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                recipient: utilizador.email,
+                subject: "RENT-A-RIDE | Confirmação de Aluguer",
+                message: mensagem.trim()
+            })
         });
 
         if (!resposta.ok) {
-        const erro = await resposta.text();
-        console.error(`Erro no serviço de email: ${erro}`);
-        return res.status(201).json({
-            mensagem: "Aluguer criado, mas erro ao enviar o e-mail.",
-            detalheErroEmail: erro
-        });
+            const erro = await resposta.text();
+            console.error(`Erro no serviço de email: ${erro}`);
+            return res.status(201).json({
+                mensagem: "Aluguer criado, mas erro ao enviar o e-mail.",
+                detalheErroEmail: erro
+            });
         }
 
         const textoResposta = await resposta.text();
@@ -293,16 +295,162 @@ app.post('/alugueres', async (req, res) => {
         }
 
         return res.status(201).json({
-        mensagem: "Aluguer criado com sucesso e e-mail enviado.",
-        resultado
+            mensagem: "Aluguer criado com sucesso e e-mail enviado.",
+            resultado
         });
-
     } catch (erro) {
         console.error("Erro ao criar aluguer ou enviar email:", erro);
         return res.status(500).json({ mensagem: "Erro interno ao criar aluguer." });
     }
-    });
+});
 
+// Endpoint - GET Alugueres
+app.get('/alugueres', async (req, res) => {
+    const user = req.session.user;
+    if (!user) {
+        return res.status(401).json({ mensagem: "Não autenticado." });
+    }
+
+    try {
+        const query = {
+            query: "SELECT * FROM alugueres a WHERE a.id_utilizador = @id AND a.ativo = true",
+            parameters: [{ name: "@id", value: user.idUtilizador }]
+        };
+        const { resources: alugueres } = await alugueresContainer.items.query(query).fetchAll();
+
+        const alugueresComCarro = await Promise.all(alugueres.map(async (a) => {
+            const queryCarro = {
+                query: "SELECT c.modelo FROM carros c WHERE c.id = @id",
+                parameters: [{ name: "@id", value: a.id_carro }]
+            };
+            const { resources: carros } = await carrosContainer.items.query(queryCarro).fetchAll();
+            const modelo = carros[0]?.modelo || "Desconhecido";
+            
+            return {
+                modelo,
+                criado_em: a.criado_em,
+                preco: a.preco,
+                id: a.id
+            };
+        }));
+
+        res.json(alugueresComCarro);
+    } catch (err) {
+        console.error("Erro ao buscar alugueres:", err);
+        res.status(500).json({ mensagem: "Erro interno ao obter alugueres." });
+    }
+});
+
+// Endpoint - DELETE Alugueres
+app.delete('/alugueres/:id', async (req, res) => {
+    const user = req.session.user;
+    const id = req.params.id;
+    if (!user) 
+        return res.status(401).json({ mensagem: "Não autenticado." });
+
+    try {
+        const query = {
+            query: "SELECT * FROM alugueres a WHERE a.id = @id AND a.id_utilizador = @uid",
+            parameters: [
+                { name: "@id", value: id },
+                { name: "@uid", value: user.idUtilizador }
+            ]
+        };
+        const { resources } = await alugueresContainer.items.query(query).fetchAll();
+        const aluguer = resources[0];
+        if (!aluguer) 
+            return res.status(404).json({ mensagem: "Aluguer não encontrado." });
+
+        // atualizar o estado do aluguer
+        aluguer.ativo = false;
+        await alugueresContainer.items.upsert(aluguer);
+
+        const queryUser = {
+            query: "SELECT * FROM utilizadores u WHERE u.id = @id",
+            parameters: [{ name: "@id", value: user.idUtilizador }]
+        };
+        const { resources: utilizadores } = await utilizadoresContainer.items.query(queryUser).fetchAll();
+        const utilizador = utilizadores[0];
+        if (!utilizador) 
+            throw new Error("Utilizador não encontrado.");
+
+        const queryCarro = {
+            query: "SELECT * FROM carros c WHERE c.id = @id",
+            parameters: [{ name: "@id", value: aluguer.id_carro }]
+        };
+        const { resources: carros } = await carrosContainer.items.query(queryCarro).fetchAll();
+        const carro = carros[0];
+        if (!carro) 
+            throw new Error("Carro não encontrado.");
+
+        // atualizar a kilometragem do carro com um valor pseudoaleatório calculado em função do tempo do aluguer
+        function gerarQuilometros(timestampInicio) {
+            const inicio = new Date(timestampInicio);
+            const agora = new Date();
+
+            // Tempo decorrido em horas
+            const horas = Math.max((agora - inicio) / (1000 * 60 * 60), 0.1); // mínimo 0.1h
+
+            // Fator aleatório controlado (entre 0.75 e 1.25)
+            const seed = (inicio.getTime() % 100000) / 100000;
+            const fatorAleatorio = 0.75 + (seed * 0.5); // entre 0.75 e 1.25
+
+            // Velocidade média base (entre 30 e 90 km/h)
+            const velocidadeBase = 30 + (seed * 60); // entre 30 e 90
+
+            // Cálculo final
+            const quilometros = Math.floor(horas * velocidadeBase * fatorAleatorio);
+
+            return quilometros;
+        }
+        const kilometrosPercorridos = gerarQuilometros(aluguer.criado_em);
+        carro.n_km += kilometrosPercorridos;
+        carro.esta_disponivel = true;
+        await carrosContainer.items.upsert(carro);
+
+        const mensagem = `
+            Olá ${utilizador.nome},
+
+            O seu aluguer terminou!
+
+            Detalhes:
+            - Modelo: ${carro.modelo}
+            - Custo final: €${aluguer.preco.toFixed(2)}
+            - Distância percorrida: ${kilometrosPercorridos} km
+
+            Obrigado por usar o RENT-A-RIDE!
+
+            Gabriel Charro
+            Guilherme Lopes
+            João Pires
+            `;
+
+        const resposta = await fetch("https://rent-a-ride-email-app.azurewebsites.net/api/enviaMail", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                recipient: utilizador.email,
+                subject: "RENT-A-RIDE | Fim de Aluguer",
+                message: mensagem.trim()
+            })
+        });
+
+        if (!resposta.ok) {
+            const erro = await resposta.text();
+            console.error(`Erro no serviço de email: ${erro}`);
+            return res.status(201).json({
+                mensagem: "Aluguer terminado, mas erro ao enviar o e-mail.",
+                detalheErroEmail: erro
+            });
+        }
+        res.status(204).end();
+    } catch (err) {
+        console.error("Erro ao parar aluguer:", err);
+        res.status(500).json({ mensagem: "Erro interno." });
+    }
+});
 
 // Endpoint - Chat com assistente
 app.post('/api/assistente', async (req, res) => {

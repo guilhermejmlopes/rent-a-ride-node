@@ -9,7 +9,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 			// Sessão ativa
 			document.getElementById('nav-login').style.display = 'none';
 			document.getElementById('nav-logout').style.display = 'block';
-			document.getElementById('nav-dados').style.display = 'block';
+			document.getElementById('nav-alugueres').style.display = 'block';
 
 			// Logout handler
 			document.getElementById('logout-link').addEventListener('click', async (e) => {
@@ -24,7 +24,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 			// Não autenticado
 			document.getElementById('nav-login').style.display = 'block';
 			document.getElementById('nav-logout').style.display = 'none';
-			document.getElementById('nav-dados').style.display = 'none';
+			document.getElementById('nav-alugueres').style.display = 'none';
 		}
 	} catch (err) {
 		console.error('Erro ao verificar sessão:', err);
